@@ -8,7 +8,8 @@ class ProfissionalBase(BaseModel):
     email: str
     rg: str
     cpf: str
-    funcao_id: str
+    funcao: Optional[str] = None
+    funcao_id: Optional[str] = None
 
 
 class ProfissionalCreate(ProfissionalBase):
@@ -20,7 +21,7 @@ class ProfissionalCreate(ProfissionalBase):
                 "email": "carlos.santos@email.com",
                 "rg": "12.345.678-9",
                 "cpf": "123.456.789-00",
-                "funcao_id": "ID_DA_FUNCAO"
+                "funcao": "Eletricista"
             }
         }
     }

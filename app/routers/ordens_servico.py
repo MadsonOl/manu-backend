@@ -27,10 +27,32 @@ async def criar_ordem_servico(
         db = get_db()
         data = os.model_dump()
         data["data"] = datetime.now().strftime("%d/%m/%Y")
-        doc_ref = db.collection(COLLECTION).document()
-        data["id"] = doc_ref.id
+
+        if data.get("profissional") and not data.get("responsavel"):
+            data["responsavel"] = data["profissional"]
+
+        data = {k: v for k, v in data.items() if v is not None}
+
+        from app.utils.id_generator import gerar_id
+        novo_id = gerar_id("ordens_servico")
+        doc_ref = db.collection(COLLECTION).document(novo_id)
+        data["id"] = novo_id
         doc_ref.set(data)
-        return data
+
+        return_data = {
+            "id": novo_id,
+            "data": data["data"],
+            "local": data.get("local", ""),
+            "descricao": data.get("descricao", ""),
+            "prioridade": data.get("prioridade", "NORMAL"),
+            "solicitante": data.get("solicitante", ""),
+            "responsavel": data.get("responsavel"),
+            "profissional": data.get("profissional"),
+            "status": data.get("status", "EM_ATENDIMENTO"),
+            "empresa_id": data.get("empresa_id"),
+            "chamado_id": data.get("chamado_id"),
+        }
+        return return_data
     except HTTPException:
         raise
     except Exception as e:

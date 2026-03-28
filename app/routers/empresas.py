@@ -21,10 +21,12 @@ async def criar_empresa(
     empresa: EmpresaCreate, user: dict = Depends(get_current_user)
 ):
     try:
+        from app.utils.id_generator import gerar_id
         db = get_db()
         data = empresa.model_dump()
-        doc_ref = db.collection("empresas").document()
-        data["id"] = doc_ref.id
+        novo_id = gerar_id("empresas")
+        doc_ref = db.collection("empresas").document(novo_id)
+        data["id"] = novo_id
         doc_ref.set(data)
         return data
     except HTTPException:

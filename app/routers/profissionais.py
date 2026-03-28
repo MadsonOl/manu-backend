@@ -21,10 +21,12 @@ async def criar_profissional(
     profissional: ProfissionalCreate, user: dict = Depends(get_current_user)
 ):
     try:
+        from app.utils.id_generator import gerar_id
         db = get_db()
         data = profissional.model_dump()
-        doc_ref = db.collection("profissionais").document()
-        data["id"] = doc_ref.id
+        novo_id = gerar_id("profissionais")
+        doc_ref = db.collection("profissionais").document(novo_id)
+        data["id"] = novo_id
         doc_ref.set(data)
         return data
     except HTTPException:

@@ -25,11 +25,13 @@ automaticamente pelo servidor.
 )
 async def criar_chamado(chamado: ChamadoCreate):
     try:
+        from app.utils.id_generator import gerar_id
         db = get_db()
         data = chamado.model_dump()
         data["data"] = datetime.now().strftime("%d/%m/%Y")
-        doc_ref = db.collection("chamados").document()
-        data["id"] = doc_ref.id
+        novo_id = gerar_id("chamados")
+        doc_ref = db.collection("chamados").document(novo_id)
+        data["id"] = novo_id
         doc_ref.set(data)
         return data
     except HTTPException:

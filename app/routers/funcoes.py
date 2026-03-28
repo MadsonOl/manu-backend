@@ -21,10 +21,12 @@ async def criar_funcao(
     funcao: FuncaoCreate, user: dict = Depends(get_current_user)
 ):
     try:
+        from app.utils.id_generator import gerar_id
         db = get_db()
         data = funcao.model_dump()
-        doc_ref = db.collection("funcoes").document()
-        data["id"] = doc_ref.id
+        novo_id = gerar_id("funcoes")
+        doc_ref = db.collection("funcoes").document(novo_id)
+        data["id"] = novo_id
         doc_ref.set(data)
         return data
     except HTTPException:

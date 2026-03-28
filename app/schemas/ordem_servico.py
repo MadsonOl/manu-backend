@@ -1,6 +1,6 @@
 from pydantic import BaseModel
+from typing import Optional
 from enum import Enum
-
 from app.schemas.chamado import Prioridade
 
 
@@ -14,9 +14,11 @@ class OrdemServicoBase(BaseModel):
     descricao: str
     prioridade: Prioridade = Prioridade.NORMAL
     solicitante: str
-    responsavel: str
+    responsavel: Optional[str] = None
+    profissional: Optional[str] = None
     status: StatusOS = StatusOS.EM_ATENDIMENTO
-    empresa_id: str
+    empresa_id: Optional[str] = None
+    chamado_id: Optional[str] = None
 
 
 class OrdemServicoCreate(OrdemServicoBase):
@@ -27,9 +29,7 @@ class OrdemServicoCreate(OrdemServicoBase):
                 "descricao": "Substituicao de lampadas queimadas",
                 "prioridade": "NORMAL",
                 "solicitante": "Joao Pereira",
-                "responsavel": "ID_DO_PROFISSIONAL",
-                "status": "EM_ATENDIMENTO",
-                "empresa_id": "ID_DA_EMPRESA"
+                "profissional": "Carlos Eduardo Santos"
             }
         }
     }
