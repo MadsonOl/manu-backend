@@ -65,6 +65,7 @@ app.add_middleware(
         "http://127.0.0.1:5178",
         "http://127.0.0.1:5179",
         "http://127.0.0.1:5180",
+        "https://manu-frontend-beta.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

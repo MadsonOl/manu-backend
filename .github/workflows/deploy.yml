@@ -24,8 +24,15 @@ jobs:
       - name: Criar credentials.json vazio
         run: echo '{}' > credentials.json
 
-      - name: Rodar testes
-        run: pytest tests/ -v
+      - name: Rodar testes com cobertura
+        run: pytest tests/ -v --cov=app --cov-report=term-missing
+
+      - name: Resumo de cobertura
+        if: always()
+        run: |
+          echo "## Resultado dos testes" >> $GITHUB_STEP_SUMMARY
+          pytest tests/ --cov=app --cov-report=term-missing \
+            --tb=no -q 2>&1 | tail -20 >> $GITHUB_STEP_SUMMARY
 
   deploy:
     runs-on: ubuntu-latest
