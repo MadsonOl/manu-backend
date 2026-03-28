@@ -12,7 +12,16 @@ load_dotenv()
 
 from app.routers import chamados, ordens_servico, profissionais, empresas, funcoes, relatorios
 
-logging.basicConfig(level=logging.INFO)
+import os
+
+APP_ENV = os.getenv("APP_ENV", "development")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+    handlers=[logging.StreamHandler()],
+)
 logger = logging.getLogger("manu")
 
 app = FastAPI(
@@ -46,27 +55,20 @@ A maioria dos endpoints exige um token Firebase JWT no header:
     }
 )
 
+_dev_origins = [
+    f"http://localhost:{p}" for p in range(5173, 5181)
+] + [
+    f"http://127.0.0.1:{p}" for p in range(5173, 5181)
+]
+_prod_origins = [
+    "https://manu-frontend-beta.vercel.app",
+]
+
+ALLOWED_ORIGINS = _dev_origins + _prod_origins if APP_ENV == "development" else _prod_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:5177",
-        "http://localhost:5178",
-        "http://localhost:5179",
-        "http://localhost:5180",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:5175",
-        "http://127.0.0.1:5176",
-        "http://127.0.0.1:5177",
-        "http://127.0.0.1:5178",
-        "http://127.0.0.1:5179",
-        "http://127.0.0.1:5180",
-        "https://manu-frontend-beta.vercel.app",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,7 +95,10 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Erro interno em {request.method} {request.url.path}: {exc}")
+    logger.error(
+        f"Erro interno em {request.method} {request.url.path}: {exc}",
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=500,
         content={"detail": "Erro interno do servidor"},

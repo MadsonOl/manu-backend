@@ -26,7 +26,7 @@ Plataforma web para gestao de chamados de manutencao, ordens de servico e profis
 
 ```bash
 # Clonar o repositorio
-git clone https://github.com/MadsonOl/manu-frontend-.git
+git clone https://github.com/MadsonOl/manu-backend.git
 cd manu-backend
 
 # Criar e ativar ambiente virtual
@@ -51,7 +51,7 @@ A API estara disponivel em `http://localhost:8000`.
 
 ```bash
 # Clonar o repositorio
-git clone https://github.com/MadsonOl/manu-frontend-.git
+git clone https://github.com/MadsonOl/manu-backend-.git
 cd manu-backend
 
 # Configurar variaveis de ambiente
