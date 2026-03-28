@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
@@ -27,12 +28,22 @@ async def test_criar_chamado_retorna_201(client):
         "prioridade": "ALTA",
         "solicitante": "Joao Teste",
     }
-    async with client as c:
-        response = await c.post("/chamados", json=payload)
+
+    mock_doc = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.document.return_value = mock_doc
+    mock_db = MagicMock()
+    mock_db.collection.return_value = mock_collection
+
+    with patch("app.routers.chamados.get_db", return_value=mock_db), \
+         patch("app.utils.id_generator.gerar_id", return_value="2026-03-0001"):
+        async with client as c:
+            response = await c.post("/chamados", json=payload)
+
     assert response.status_code == 201
     data = response.json()
     assert data["local"] == payload["local"]
-    assert "id" in data
+    assert data["id"] == "2026-03-0001"
 
 
 @pytest.mark.asyncio
