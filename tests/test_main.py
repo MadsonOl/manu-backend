@@ -40,3 +40,110 @@ async def test_listar_profissionais_sem_token_retorna_401(client):
     async with client as c:
         response = await c.get("/profissionais")
     assert response.status_code in (401, 403)
+
+
+# ── Chamados ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_criar_chamado_sem_local_retorna_422(client):
+    payload = {
+        "descricao": "Vazamento no banheiro",
+        "prioridade": "ALTA",
+        "solicitante": "Joao Teste",
+    }
+    async with client as c:
+        response = await c.post("/chamados", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_criar_chamado_prioridade_invalida_retorna_422(client):
+    payload = {
+        "local": "Bloco B - Sala 202",
+        "descricao": "Vazamento no banheiro",
+        "prioridade": "URGENTE",
+        "solicitante": "Joao Teste",
+    }
+    async with client as c:
+        response = await c.post("/chamados", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_listar_chamados_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.get("/chamados")
+    assert response.status_code in (401, 403)
+
+
+# ── Ordens de Servico ────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_listar_ordens_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.get("/ordens-servico")
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_finalizar_os_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.patch("/ordens-servico/id-qualquer/finalizar")
+    assert response.status_code in (401, 403)
+
+
+# ── Profissionais ─────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_criar_profissional_sem_token_retorna_401(client):
+    payload = {
+        "nome": "Carlos Eduardo",
+        "telefone": "(11) 98765-4321",
+        "email": "carlos@email.com",
+        "rg": "12.345.678-9",
+        "cpf": "123.456.789-00",
+        "funcao_id": "abc123",
+    }
+    async with client as c:
+        response = await c.post("/profissionais", json=payload)
+    assert response.status_code in (401, 403)
+
+
+# ── Empresas ──────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_listar_empresas_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.get("/empresas")
+    assert response.status_code in (401, 403)
+
+
+# ── Funcoes ───────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_listar_funcoes_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.get("/funcoes")
+    assert response.status_code in (401, 403)
+
+
+# ── Relatorios ────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_relatorios_sem_token_retorna_401(client):
+    async with client as c:
+        response = await c.get("/relatorios")
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_relatorios_com_filtro_status_invalido(client):
+    async with client as c:
+        response = await c.get("/relatorios?status=INEXISTENTE")
+    assert response.status_code in (401, 403)

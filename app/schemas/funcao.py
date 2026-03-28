@@ -6,7 +6,13 @@ class FuncaoBase(BaseModel):
 
 
 class FuncaoCreate(FuncaoBase):
-    pass
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "nome": "Eletricista"
+            }
+        }
+    }
 
 
 class FuncaoResponse(FuncaoBase):

@@ -10,7 +10,13 @@ router = APIRouter(prefix="/profissionais", tags=["Profissionais"])
 logger = logging.getLogger("manu")
 
 
-@router.post("", response_model=ProfissionalResponse, status_code=201)
+@router.post(
+    "",
+    response_model=ProfissionalResponse,
+    status_code=201,
+    summary="Cadastrar profissional",
+    description="Cadastra um novo profissional no sistema. Requer autenticacao de gestor."
+)
 async def criar_profissional(
     profissional: ProfissionalCreate, user: dict = Depends(get_current_user)
 ):
@@ -28,7 +34,12 @@ async def criar_profissional(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("", response_model=list[ProfissionalResponse])
+@router.get(
+    "",
+    response_model=list[ProfissionalResponse],
+    summary="Listar profissionais",
+    description="Retorna todos os profissionais cadastrados. Requer autenticacao."
+)
 async def listar_profissionais(user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -41,7 +52,12 @@ async def listar_profissionais(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("/{profissional_id}", response_model=ProfissionalResponse)
+@router.get(
+    "/{profissional_id}",
+    response_model=ProfissionalResponse,
+    summary="Buscar profissional por ID",
+    description="Retorna os dados de um profissional especifico. Requer autenticacao."
+)
 async def obter_profissional(
     profissional_id: str, user: dict = Depends(get_current_user)
 ):
@@ -58,7 +74,12 @@ async def obter_profissional(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.put("/{profissional_id}", response_model=ProfissionalResponse)
+@router.put(
+    "/{profissional_id}",
+    response_model=ProfissionalResponse,
+    summary="Atualizar profissional",
+    description="Atualiza os dados de um profissional existente. Requer autenticacao de gestor."
+)
 async def atualizar_profissional(
     profissional_id: str,
     profissional: ProfissionalCreate,
@@ -80,7 +101,11 @@ async def atualizar_profissional(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.delete("/{profissional_id}")
+@router.delete(
+    "/{profissional_id}",
+    summary="Excluir profissional",
+    description="Remove um profissional permanentemente. Requer autenticacao de gestor."
+)
 async def deletar_profissional(
     profissional_id: str, user: dict = Depends(get_current_user)
 ):

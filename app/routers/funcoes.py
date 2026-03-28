@@ -10,7 +10,13 @@ router = APIRouter(prefix="/funcoes", tags=["Funcoes"])
 logger = logging.getLogger("manu")
 
 
-@router.post("", response_model=FuncaoResponse, status_code=201)
+@router.post(
+    "",
+    response_model=FuncaoResponse,
+    status_code=201,
+    summary="Cadastrar funcao",
+    description="Cadastra uma nova funcao (cargo) no sistema. Requer autenticacao de gestor."
+)
 async def criar_funcao(
     funcao: FuncaoCreate, user: dict = Depends(get_current_user)
 ):
@@ -28,7 +34,12 @@ async def criar_funcao(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("", response_model=list[FuncaoResponse])
+@router.get(
+    "",
+    response_model=list[FuncaoResponse],
+    summary="Listar funcoes",
+    description="Retorna todas as funcoes cadastradas. Requer autenticacao."
+)
 async def listar_funcoes(user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -41,7 +52,12 @@ async def listar_funcoes(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("/{funcao_id}", response_model=FuncaoResponse)
+@router.get(
+    "/{funcao_id}",
+    response_model=FuncaoResponse,
+    summary="Buscar funcao por ID",
+    description="Retorna os dados de uma funcao especifica. Requer autenticacao."
+)
 async def obter_funcao(funcao_id: str, user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -56,7 +72,12 @@ async def obter_funcao(funcao_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.put("/{funcao_id}", response_model=FuncaoResponse)
+@router.put(
+    "/{funcao_id}",
+    response_model=FuncaoResponse,
+    summary="Atualizar funcao",
+    description="Atualiza os dados de uma funcao existente. Requer autenticacao de gestor."
+)
 async def atualizar_funcao(
     funcao_id: str,
     funcao: FuncaoCreate,
@@ -78,7 +99,11 @@ async def atualizar_funcao(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.delete("/{funcao_id}")
+@router.delete(
+    "/{funcao_id}",
+    summary="Excluir funcao",
+    description="Remove uma funcao permanentemente. Requer autenticacao de gestor."
+)
 async def deletar_funcao(funcao_id: str, user: dict = Depends(get_current_user)):
     try:
         db = get_db()

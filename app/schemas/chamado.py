@@ -16,7 +16,16 @@ class ChamadoBase(BaseModel):
 
 
 class ChamadoCreate(ChamadoBase):
-    pass
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "local": "Bloco B - Sala 202",
+                "descricao": "Torneira com vazamento continuo",
+                "prioridade": "ALTA",
+                "solicitante": "Maria Silva"
+            }
+        }
+    }
 
 
 class ChamadoResponse(ChamadoBase):

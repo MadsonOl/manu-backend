@@ -3,6 +3,7 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
@@ -14,9 +15,34 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("manu")
 
 app = FastAPI(
-    title="Manu API",
-    description="API do sistema de gestao de manutencoes Manu",
-    version="1.0.0"
+    title="manu API",
+    description="""
+API do sistema manu — plataforma de gestao de manutencoes.
+
+## Autenticacao
+A maioria dos endpoints exige um token Firebase JWT no header:
+`Authorization: Bearer <token>`
+
+## Endpoints publicos (sem autenticacao)
+- `POST /chamados` — abertura de chamado por usuario externo
+- `GET /` — status da API
+
+## Fluxo principal
+1. Gestor se autentica via Firebase Auth
+2. Chamado e aberto por usuario externo via link publico
+3. Gestor converte chamado em ordem de servico
+4. Ordem e atribuida a um profissional cadastrado
+5. Gestor finaliza a ordem quando concluida
+6. Relatorios filtrados ficam disponiveis para impressao
+    """,
+    version="1.0.0",
+    contact={
+        "name": "Suporte manu",
+        "email": "suporte@manu.app"
+    },
+    license_info={
+        "name": "MIT"
+    }
 )
 
 app.add_middleware(
@@ -52,6 +78,30 @@ app.include_router(profissionais.router)
 app.include_router(empresas.router)
 app.include_router(funcoes.router)
 app.include_router(relatorios.router)
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Token JWT obtido via Firebase Authentication"
+        }
+    }
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.get("/", tags=["Root"])

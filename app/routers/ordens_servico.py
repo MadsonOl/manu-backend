@@ -13,7 +13,13 @@ logger = logging.getLogger("manu")
 COLLECTION = "ordens_servico"
 
 
-@router.post("", response_model=OrdemServicoResponse, status_code=201)
+@router.post(
+    "",
+    response_model=OrdemServicoResponse,
+    status_code=201,
+    summary="Criar ordem de servico",
+    description="Cria uma nova ordem de servico a partir de um chamado. Requer autenticacao de gestor."
+)
 async def criar_ordem_servico(
     os: OrdemServicoCreate, user: dict = Depends(get_current_user)
 ):
@@ -32,7 +38,12 @@ async def criar_ordem_servico(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("", response_model=list[OrdemServicoResponse])
+@router.get(
+    "",
+    response_model=list[OrdemServicoResponse],
+    summary="Listar ordens de servico",
+    description="Retorna todas as ordens de servico cadastradas. Requer autenticacao."
+)
 async def listar_ordens_servico(user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -45,7 +56,12 @@ async def listar_ordens_servico(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("/{os_id}", response_model=OrdemServicoResponse)
+@router.get(
+    "/{os_id}",
+    response_model=OrdemServicoResponse,
+    summary="Buscar ordem de servico por ID",
+    description="Retorna os dados de uma ordem de servico especifica. Requer autenticacao."
+)
 async def obter_ordem_servico(os_id: str, user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -60,7 +76,12 @@ async def obter_ordem_servico(os_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.put("/{os_id}", response_model=OrdemServicoResponse)
+@router.put(
+    "/{os_id}",
+    response_model=OrdemServicoResponse,
+    summary="Atualizar ordem de servico",
+    description="Atualiza os dados de uma ordem de servico existente. Requer autenticacao."
+)
 async def atualizar_ordem_servico(
     os_id: str,
     os: OrdemServicoCreate,
@@ -82,7 +103,12 @@ async def atualizar_ordem_servico(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.patch("/{os_id}/finalizar", response_model=OrdemServicoResponse)
+@router.patch(
+    "/{os_id}/finalizar",
+    response_model=OrdemServicoResponse,
+    summary="Finalizar ordem de servico",
+    description="Muda o status da OS para FINALIZADO. Requer autenticacao."
+)
 async def finalizar_ordem_servico(
     os_id: str, user: dict = Depends(get_current_user)
 ):
@@ -102,7 +128,11 @@ async def finalizar_ordem_servico(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.delete("/{os_id}")
+@router.delete(
+    "/{os_id}",
+    summary="Excluir ordem de servico",
+    description="Remove uma ordem de servico permanentemente. Requer autenticacao."
+)
 async def deletar_ordem_servico(
     os_id: str, user: dict = Depends(get_current_user)
 ):

@@ -11,7 +11,18 @@ router = APIRouter(prefix="/chamados", tags=["Chamados"])
 logger = logging.getLogger("manu")
 
 
-@router.post("", response_model=ChamadoResponse, status_code=201)
+@router.post(
+    "",
+    response_model=ChamadoResponse,
+    status_code=201,
+    summary="Abrir novo chamado",
+    description="""
+Endpoint publico — nao requer autenticacao.
+Usado por usuarios externos via link ou QR Code para registrar
+uma solicitacao de manutencao. O ID e a data sao gerados
+automaticamente pelo servidor.
+    """
+)
 async def criar_chamado(chamado: ChamadoCreate):
     try:
         db = get_db()
@@ -28,7 +39,12 @@ async def criar_chamado(chamado: ChamadoCreate):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("", response_model=list[ChamadoResponse])
+@router.get(
+    "",
+    response_model=list[ChamadoResponse],
+    summary="Listar todos os chamados",
+    description="Retorna todos os chamados cadastrados. Requer autenticacao de gestor."
+)
 async def listar_chamados(user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -41,7 +57,12 @@ async def listar_chamados(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.get("/{chamado_id}", response_model=ChamadoResponse)
+@router.get(
+    "/{chamado_id}",
+    response_model=ChamadoResponse,
+    summary="Buscar chamado por ID",
+    description="Retorna os dados de um chamado especifico. Requer autenticacao de gestor."
+)
 async def obter_chamado(chamado_id: str, user: dict = Depends(get_current_user)):
     try:
         db = get_db()
@@ -56,7 +77,12 @@ async def obter_chamado(chamado_id: str, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.put("/{chamado_id}", response_model=ChamadoResponse)
+@router.put(
+    "/{chamado_id}",
+    response_model=ChamadoResponse,
+    summary="Atualizar chamado",
+    description="Atualiza os dados de um chamado existente. Requer autenticacao de gestor."
+)
 async def atualizar_chamado(
     chamado_id: str,
     chamado: ChamadoCreate,
@@ -78,7 +104,11 @@ async def atualizar_chamado(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
-@router.delete("/{chamado_id}")
+@router.delete(
+    "/{chamado_id}",
+    summary="Excluir chamado",
+    description="Remove um chamado permanentemente. Requer autenticacao de gestor."
+)
 async def deletar_chamado(chamado_id: str, user: dict = Depends(get_current_user)):
     try:
         db = get_db()

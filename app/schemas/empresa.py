@@ -11,7 +11,17 @@ class EmpresaBase(BaseModel):
 
 
 class EmpresaCreate(EmpresaBase):
-    pass
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "cnpj": "12.345.678/0001-90",
+                "nome": "Predial Manutencoes Ltda",
+                "endereco": "Rua das Flores, 100 - Centro",
+                "gestor_manutencao": "Ana Paula Oliveira",
+                "informacoes_adicionais": "Contrato vigente ate 12/2026"
+            }
+        }
+    }
 
 
 class EmpresaResponse(EmpresaBase):

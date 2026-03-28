@@ -12,7 +12,16 @@ router = APIRouter(prefix="/relatorios", tags=["Relatorios"])
 logger = logging.getLogger("manu")
 
 
-@router.get("", response_model=list[OrdemServicoResponse])
+@router.get(
+    "",
+    response_model=list[OrdemServicoResponse],
+    summary="Gerar relatorio de ordens de servico",
+    description="""
+Retorna lista de ordens de servico com filtros opcionais.
+Todos os parametros de query sao opcionais e podem ser combinados.
+Formato de data: DD/MM/YYYY
+    """
+)
 async def listar_relatorios(
     profissional_id: Optional[str] = Query(None),
     data_inicio: Optional[str] = Query(None, description="Formato DD/MM/YYYY"),

@@ -20,7 +20,19 @@ class OrdemServicoBase(BaseModel):
 
 
 class OrdemServicoCreate(OrdemServicoBase):
-    pass
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "local": "Bloco A - Banheiro Masculino",
+                "descricao": "Substituicao de lampadas queimadas",
+                "prioridade": "NORMAL",
+                "solicitante": "Joao Pereira",
+                "responsavel": "ID_DO_PROFISSIONAL",
+                "status": "EM_ATENDIMENTO",
+                "empresa_id": "ID_DA_EMPRESA"
+            }
+        }
+    }
 
 
 class OrdemServicoResponse(OrdemServicoBase):
