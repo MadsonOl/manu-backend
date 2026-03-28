@@ -309,7 +309,3 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 5. Profissional executa o servico de manutencao
 6. Gestor finaliza a ordem (`PATCH /ordens-servico/{id}/finalizar`)
 7. Relatorios filtrados ficam disponiveis para consulta e impressao
-
-## Licenca
-
-MIT
