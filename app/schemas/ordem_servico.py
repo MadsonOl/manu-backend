@@ -38,3 +38,4 @@ class OrdemServicoCreate(OrdemServicoBase):
 class OrdemServicoResponse(OrdemServicoBase):
     id: str
     data: str
+    empresa: Optional[dict] = None

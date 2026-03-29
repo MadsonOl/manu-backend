@@ -13,6 +13,19 @@ logger = logging.getLogger("manu")
 COLLECTION = "ordens_servico"
 
 
+def _resolve_empresa(db, os_data: dict) -> dict:
+    empresa_id = os_data.get("empresa_id")
+    if empresa_id:
+        doc = db.collection("empresas").document(empresa_id).get()
+        if doc.exists:
+            os_data["empresa"] = {"id": doc.id, **doc.to_dict()}
+        else:
+            os_data["empresa"] = None
+    else:
+        os_data["empresa"] = None
+    return os_data
+
+
 @router.post(
     "",
     response_model=OrdemServicoResponse,
@@ -52,7 +65,7 @@ async def criar_ordem_servico(
             "empresa_id": data.get("empresa_id"),
             "chamado_id": data.get("chamado_id"),
         }
-        return return_data
+        return _resolve_empresa(db, return_data)
     except HTTPException:
         raise
     except Exception as e:
@@ -70,7 +83,8 @@ async def listar_ordens_servico(user: dict = Depends(get_current_user)):
     try:
         db = get_db()
         docs = db.collection(COLLECTION).stream()
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        resultado = [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return [_resolve_empresa(db, item) for item in resultado]
     except HTTPException:
         raise
     except Exception as e:
@@ -90,7 +104,7 @@ async def obter_ordem_servico(os_id: str, user: dict = Depends(get_current_user)
         doc = db.collection(COLLECTION).document(os_id).get()
         if not doc.exists:
             raise HTTPException(status_code=404, detail="Ordem de servico nao encontrada")
-        return {"id": doc.id, **doc.to_dict()}
+        return _resolve_empresa(db, {"id": doc.id, **doc.to_dict()})
     except HTTPException:
         raise
     except Exception as e:
