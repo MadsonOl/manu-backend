@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
@@ -11,10 +12,15 @@ def _initialize():
     global _initialized
     if _initialized:
         return
-    cred_path = os.getenv("FIREBASE_CREDENTIALS", "credentials.json")
-    logger.info(f"Inicializando Firebase com credenciais: {cred_path}")
+    firebase_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+    if firebase_json:
+        cred_dict = json.loads(firebase_json)
+        logger.info("Inicializando Firebase com credenciais via FIREBASE_CREDENTIALS_JSON")
+    else:
+        cred_dict = os.getenv("FIREBASE_CREDENTIALS", "credentials.json")
+        logger.info(f"Inicializando Firebase com credenciais: {cred_dict}")
     try:
-        cred = credentials.Certificate(cred_path)
+        cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred)
         _initialized = True
         logger.info("Firebase inicializado com sucesso")
