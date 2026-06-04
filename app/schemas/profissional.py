@@ -1,5 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
+
+from app.schemas._validators import (
+    texto,
+    cpf as validar_cpf,
+    telefone as validar_telefone,
+    email as validar_email,
+)
 
 
 class ProfissionalBase(BaseModel):
@@ -25,6 +32,26 @@ class ProfissionalCreate(ProfissionalBase):
             }
         }
     }
+
+    @field_validator("nome", "rg")
+    @classmethod
+    def _obrigatorios(cls, v):
+        return texto(v, maximo=200)
+
+    @field_validator("cpf")
+    @classmethod
+    def _cpf(cls, v):
+        return validar_cpf(v)
+
+    @field_validator("telefone")
+    @classmethod
+    def _telefone(cls, v):
+        return validar_telefone(v)
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v):
+        return validar_email(v)
 
 
 class ProfissionalResponse(ProfissionalBase):

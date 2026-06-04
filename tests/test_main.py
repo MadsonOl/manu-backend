@@ -82,6 +82,33 @@ async def test_criar_chamado_prioridade_invalida_retorna_422(client):
 
 
 @pytest.mark.asyncio
+async def test_criar_chamado_local_em_branco_retorna_422(client):
+    # Endpoint publico: campo so com espacos deve ser rejeitado pela validacao.
+    payload = {
+        "local": "   ",
+        "descricao": "Vazamento no banheiro",
+        "prioridade": "ALTA",
+        "solicitante": "Joao Teste",
+    }
+    async with client as c:
+        response = await c.post("/chamados", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_criar_chamado_descricao_muito_longa_retorna_422(client):
+    payload = {
+        "local": "Bloco B",
+        "descricao": "x" * 2001,
+        "prioridade": "ALTA",
+        "solicitante": "Joao Teste",
+    }
+    async with client as c:
+        response = await c.post("/chamados", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_listar_chamados_sem_token_retorna_401(client):
     async with client as c:
         response = await c.get("/chamados")
@@ -110,12 +137,14 @@ async def test_finalizar_os_sem_token_retorna_401(client):
 
 @pytest.mark.asyncio
 async def test_criar_profissional_sem_token_retorna_401(client):
+    # Payload valido (digitos), como o frontend envia, para o teste exercitar a
+    # camada de autenticacao e nao a de validacao.
     payload = {
         "nome": "Carlos Eduardo",
-        "telefone": "(11) 98765-4321",
+        "telefone": "11987654321",
         "email": "carlos@email.com",
-        "rg": "12.345.678-9",
-        "cpf": "123.456.789-00",
+        "rg": "123456789",
+        "cpf": "52998224725",
         "funcao_id": "abc123",
     }
     async with client as c:

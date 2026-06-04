@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from app.schemas._validators import texto
 
 
 class FuncaoBase(BaseModel):
@@ -13,6 +15,11 @@ class FuncaoCreate(FuncaoBase):
             }
         }
     }
+
+    @field_validator("nome")
+    @classmethod
+    def _nome(cls, v):
+        return texto(v, maximo=100)
 
 
 class FuncaoResponse(FuncaoBase):

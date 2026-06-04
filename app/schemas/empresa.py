@@ -1,5 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
+
+from app.schemas._validators import texto, texto_opcional, cnpj as validar_cnpj
 
 
 class EmpresaBase(BaseModel):
@@ -22,6 +24,21 @@ class EmpresaCreate(EmpresaBase):
             }
         }
     }
+
+    @field_validator("nome", "endereco", "gestor_manutencao")
+    @classmethod
+    def _obrigatorios(cls, v):
+        return texto(v, maximo=300)
+
+    @field_validator("cnpj")
+    @classmethod
+    def _cnpj(cls, v):
+        return validar_cnpj(v)
+
+    @field_validator("informacoes_adicionais")
+    @classmethod
+    def _info(cls, v):
+        return texto_opcional(v, maximo=2000)
 
 
 class EmpresaResponse(EmpresaBase):

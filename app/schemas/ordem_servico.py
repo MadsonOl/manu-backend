@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from enum import Enum
 from app.schemas.chamado import Prioridade
+from app.schemas._validators import texto
 
 
 class StatusOS(str, Enum):
@@ -33,6 +34,16 @@ class OrdemServicoCreate(OrdemServicoBase):
             }
         }
     }
+
+    @field_validator("local", "solicitante")
+    @classmethod
+    def _curtos(cls, v):
+        return texto(v, maximo=200)
+
+    @field_validator("descricao")
+    @classmethod
+    def _descricao(cls, v):
+        return texto(v, maximo=2000)
 
 
 class OrdemServicoResponse(OrdemServicoBase):
