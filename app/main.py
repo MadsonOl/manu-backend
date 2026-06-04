@@ -2,6 +2,7 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -86,10 +87,15 @@ async def log_requests(request: Request, call_next):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    logger.error(f"Erro de validacao 422: {exc.errors()}")
+    # jsonable_encoder garante que erros vindos de validadores customizados
+    # (cujo ctx pode conter um objeto ValueError nao-serializavel) sejam
+    # convertidos para JSON, evitando que o 422 vire um 500. Mesmo comportamento
+    # do handler padrao do FastAPI, mas mantendo o log.
+    erros = jsonable_encoder(exc.errors())
+    logger.error(f"Erro de validacao 422: {erros}")
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()}
+        content={"detail": erros},
     )
 
 
