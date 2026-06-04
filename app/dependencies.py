@@ -13,10 +13,11 @@ async def get_current_user(
 ) -> dict:
     _initialize()
     token = credentials.credentials
-    logger.info(f"Verificando token (primeiros 20 chars): {token[:20]}...")
     try:
         decoded = auth.verify_id_token(token)
-        logger.info(f"Token valido para: {decoded.get('email', decoded.get('uid'))}")
+        # Nao logar e-mail (PII) nem o token a cada requisicao. O uid em DEBUG
+        # basta para rastreio; a falha continua em ERROR abaixo.
+        logger.debug(f"Token valido para uid: {decoded.get('uid')}")
         return decoded
     except Exception as e:
         logger.error(f"FALHA ao verificar token: {type(e).__name__}: {e}")

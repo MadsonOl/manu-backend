@@ -104,15 +104,19 @@ manu-backend/
 │   │   ├── funcoes.py
 │   │   └── relatorios.py
 │   ├── schemas/             # Modelos Pydantic (validacao de dados)
+│   │   ├── _validators.py    # Validadores reaproveitados (CPF/CNPJ com DV, telefone, email)
 │   │   ├── chamado.py
 │   │   ├── ordem_servico.py
 │   │   ├── profissional.py
 │   │   ├── empresa.py
 │   │   └── funcao.py
+│   ├── repositories/        # Acesso a dados
+│   │   └── crud.py           # CRUD generico do Firestore reaproveitado pelos routers
 │   └── utils/
 │       └── id_generator.py  # Gerador de IDs sequenciais (formato YYYY-MM-XXXX)
 ├── tests/
-│   └── test_main.py         # Testes automatizados
+│   ├── test_main.py         # Testes de endpoints (routers com DB mockado)
+│   └── test_schemas.py      # Testes de validacao dos schemas
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml        # Pipeline CI/CD (testes + deploy)
@@ -145,7 +149,7 @@ Todos os demais endpoints exigem token valido.
 
 | Metodo | Rota | Descricao | Autenticacao |
 |--------|------|-----------|--------------|
-| GET | `/` | Health check — retorna `{"status": "online"}` | Nao |
+| GET | `/` | Health check — retorna `{"status": "online", "message": "Manu API funcionando"}` | Nao |
 
 ### Chamados
 
@@ -218,6 +222,8 @@ Parametros de query opcionais para `/relatorios`:
 
 Todos os IDs sao gerados automaticamente no formato `YYYY-MM-XXXX` (ex: `2026-03-0001`), com contador sequencial mensal.
 
+Os schemas de entrada (`Create`) validam os dados recebidos: CPF e CNPJ com digitos verificadores, telefone, e-mail e campos de texto obrigatorios (modulo `app/schemas/_validators.py`). Os schemas de resposta permanecem permissivos para nao rejeitar dados legados ja gravados.
+
 ### Chamado
 
 | Campo | Tipo | Obrigatorio | Descricao |
@@ -244,6 +250,9 @@ Todos os IDs sao gerados automaticamente no formato `YYYY-MM-XXXX` (ex: `2026-03
 | `empresa_id` | string | nao | ID da empresa vinculada |
 | `chamado_id` | string | nao | ID do chamado de origem |
 | `data` | string | auto | Data de criacao (DD/MM/AAAA) |
+| `empresa` | objeto | auto | Empresa vinculada, resolvida a partir de `empresa_id` (`null` quando nao ha vinculo) |
+
+> O campo `empresa` e derivado: a API resolve o `empresa_id` e devolve o objeto da empresa nas respostas de GET, POST e PUT. A listagem (`GET /ordens-servico`) resolve todas as empresas referenciadas em uma unica leitura em lote, sem uma consulta por ordem.
 
 ### Profissional
 

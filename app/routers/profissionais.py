@@ -5,9 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.profissional import ProfissionalCreate, ProfissionalResponse
 from app.firebase import get_db
 from app.dependencies import get_current_user
+from app.repositories.crud import CrudRepository
 
 router = APIRouter(prefix="/profissionais", tags=["Profissionais"])
 logger = logging.getLogger("manu")
+
+repo = CrudRepository("profissionais", nao_encontrado="Profissional nao encontrado", excluido="Profissional deletado com sucesso")
 
 
 @router.post(
@@ -21,14 +24,7 @@ async def criar_profissional(
     profissional: ProfissionalCreate, user: dict = Depends(get_current_user)
 ):
     try:
-        from app.utils.id_generator import gerar_id
-        db = get_db()
-        data = profissional.model_dump()
-        novo_id = gerar_id("profissionais")
-        doc_ref = db.collection("profissionais").document(novo_id)
-        data["id"] = novo_id
-        doc_ref.set(data)
-        return data
+        return repo.criar(get_db(), profissional.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -44,9 +40,7 @@ async def criar_profissional(
 )
 async def listar_profissionais(user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        docs = db.collection("profissionais").stream()
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return repo.listar(get_db())
     except HTTPException:
         raise
     except Exception as e:
@@ -64,11 +58,7 @@ async def obter_profissional(
     profissional_id: str, user: dict = Depends(get_current_user)
 ):
     try:
-        db = get_db()
-        doc = db.collection("profissionais").document(profissional_id).get()
-        if not doc.exists:
-            raise HTTPException(status_code=404, detail="Profissional nao encontrado")
-        return {"id": doc.id, **doc.to_dict()}
+        return repo.obter(get_db(), profissional_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -88,14 +78,7 @@ async def atualizar_profissional(
     user: dict = Depends(get_current_user),
 ):
     try:
-        db = get_db()
-        doc_ref = db.collection("profissionais").document(profissional_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Profissional nao encontrado")
-        data = profissional.model_dump()
-        doc_ref.update(data)
-        updated = doc_ref.get()
-        return {"id": updated.id, **updated.to_dict()}
+        return repo.atualizar(get_db(), profissional_id, profissional.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -112,12 +95,7 @@ async def deletar_profissional(
     profissional_id: str, user: dict = Depends(get_current_user)
 ):
     try:
-        db = get_db()
-        doc_ref = db.collection("profissionais").document(profissional_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Profissional nao encontrado")
-        doc_ref.delete()
-        return {"message": "Profissional deletado com sucesso"}
+        return repo.excluir(get_db(), profissional_id)
     except HTTPException:
         raise
     except Exception as e:

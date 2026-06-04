@@ -5,9 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.funcao import FuncaoCreate, FuncaoResponse
 from app.firebase import get_db
 from app.dependencies import get_current_user
+from app.repositories.crud import CrudRepository
 
 router = APIRouter(prefix="/funcoes", tags=["Funcoes"])
 logger = logging.getLogger("manu")
+
+repo = CrudRepository("funcoes", nao_encontrado="Funcao nao encontrada", excluido="Funcao deletada com sucesso")
 
 
 @router.post(
@@ -21,14 +24,7 @@ async def criar_funcao(
     funcao: FuncaoCreate, user: dict = Depends(get_current_user)
 ):
     try:
-        from app.utils.id_generator import gerar_id
-        db = get_db()
-        data = funcao.model_dump()
-        novo_id = gerar_id("funcoes")
-        doc_ref = db.collection("funcoes").document(novo_id)
-        data["id"] = novo_id
-        doc_ref.set(data)
-        return data
+        return repo.criar(get_db(), funcao.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -44,9 +40,7 @@ async def criar_funcao(
 )
 async def listar_funcoes(user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        docs = db.collection("funcoes").stream()
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return repo.listar(get_db())
     except HTTPException:
         raise
     except Exception as e:
@@ -62,11 +56,7 @@ async def listar_funcoes(user: dict = Depends(get_current_user)):
 )
 async def obter_funcao(funcao_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc = db.collection("funcoes").document(funcao_id).get()
-        if not doc.exists:
-            raise HTTPException(status_code=404, detail="Funcao nao encontrada")
-        return {"id": doc.id, **doc.to_dict()}
+        return repo.obter(get_db(), funcao_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -86,14 +76,7 @@ async def atualizar_funcao(
     user: dict = Depends(get_current_user),
 ):
     try:
-        db = get_db()
-        doc_ref = db.collection("funcoes").document(funcao_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Funcao nao encontrada")
-        data = funcao.model_dump()
-        doc_ref.update(data)
-        updated = doc_ref.get()
-        return {"id": updated.id, **updated.to_dict()}
+        return repo.atualizar(get_db(), funcao_id, funcao.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -108,12 +91,7 @@ async def atualizar_funcao(
 )
 async def deletar_funcao(funcao_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc_ref = db.collection("funcoes").document(funcao_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Funcao nao encontrada")
-        doc_ref.delete()
-        return {"message": "Funcao deletada com sucesso"}
+        return repo.excluir(get_db(), funcao_id)
     except HTTPException:
         raise
     except Exception as e:

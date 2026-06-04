@@ -7,6 +7,7 @@ from app.schemas.chamado import ChamadoCreate
 from app.schemas.empresa import EmpresaCreate
 from app.schemas.profissional import ProfissionalCreate
 from app.schemas.funcao import FuncaoCreate
+from app.schemas.ordem_servico import OrdemServicoCreate
 
 
 # ── Chamado ───────────────────────────────────────────────
@@ -84,3 +85,41 @@ def test_profissional_invalido(campo, valor):
 def test_funcao_em_branco():
     with pytest.raises(ValidationError):
         FuncaoCreate(nome="  ")
+
+
+# ── Bordas dos validadores ────────────────────────────────
+
+def test_cpf_digitos_repetidos_invalido():
+    # DV "passaria" para sequencias iguais; a guarda c == c[0]*11 barra isso.
+    base = {"nome": "Carlos", "telefone": "11988887777", "email": "c@x.com",
+            "rg": "123456789", "cpf": "11111111111"}
+    with pytest.raises(ValidationError):
+        ProfissionalCreate(**base)
+
+
+def test_cnpj_digitos_repetidos_invalido():
+    with pytest.raises(ValidationError):
+        EmpresaCreate(cnpj="11111111111111", nome="Acme", endereco="Rua 1", gestor_manutencao="Ana")
+
+
+def test_telefone_fixo_10_digitos_valido():
+    p = ProfissionalCreate(nome="Carlos", telefone="(11) 3333-4444", email="c@x.com",
+                           rg="123456789", cpf="52998224725")
+    assert p.telefone == "1133334444"
+
+
+def test_telefone_12_digitos_invalido():
+    base = {"nome": "Carlos", "telefone": "123456789012", "email": "c@x.com",
+            "rg": "123456789", "cpf": "52998224725"}
+    with pytest.raises(ValidationError):
+        ProfissionalCreate(**base)
+
+
+def test_ordem_servico_local_no_limite_passa():
+    os = OrdemServicoCreate(local="A" * 200, descricao="x", solicitante="S")
+    assert len(os.local) == 200
+
+
+def test_ordem_servico_local_acima_do_limite_falha():
+    with pytest.raises(ValidationError):
+        OrdemServicoCreate(local="A" * 201, descricao="x", solicitante="S")

@@ -5,9 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.empresa import EmpresaCreate, EmpresaResponse
 from app.firebase import get_db
 from app.dependencies import get_current_user
+from app.repositories.crud import CrudRepository
 
 router = APIRouter(prefix="/empresas", tags=["Empresas"])
 logger = logging.getLogger("manu")
+
+repo = CrudRepository("empresas", nao_encontrado="Empresa nao encontrada", excluido="Empresa deletada com sucesso")
 
 
 @router.post(
@@ -21,14 +24,7 @@ async def criar_empresa(
     empresa: EmpresaCreate, user: dict = Depends(get_current_user)
 ):
     try:
-        from app.utils.id_generator import gerar_id
-        db = get_db()
-        data = empresa.model_dump()
-        novo_id = gerar_id("empresas")
-        doc_ref = db.collection("empresas").document(novo_id)
-        data["id"] = novo_id
-        doc_ref.set(data)
-        return data
+        return repo.criar(get_db(), empresa.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -44,9 +40,7 @@ async def criar_empresa(
 )
 async def listar_empresas(user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        docs = db.collection("empresas").stream()
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return repo.listar(get_db())
     except HTTPException:
         raise
     except Exception as e:
@@ -62,11 +56,7 @@ async def listar_empresas(user: dict = Depends(get_current_user)):
 )
 async def obter_empresa(empresa_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc = db.collection("empresas").document(empresa_id).get()
-        if not doc.exists:
-            raise HTTPException(status_code=404, detail="Empresa nao encontrada")
-        return {"id": doc.id, **doc.to_dict()}
+        return repo.obter(get_db(), empresa_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -86,14 +76,7 @@ async def atualizar_empresa(
     user: dict = Depends(get_current_user),
 ):
     try:
-        db = get_db()
-        doc_ref = db.collection("empresas").document(empresa_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Empresa nao encontrada")
-        data = empresa.model_dump()
-        doc_ref.update(data)
-        updated = doc_ref.get()
-        return {"id": updated.id, **updated.to_dict()}
+        return repo.atualizar(get_db(), empresa_id, empresa.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -108,12 +91,7 @@ async def atualizar_empresa(
 )
 async def deletar_empresa(empresa_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc_ref = db.collection("empresas").document(empresa_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Empresa nao encontrada")
-        doc_ref.delete()
-        return {"message": "Empresa deletada com sucesso"}
+        return repo.excluir(get_db(), empresa_id)
     except HTTPException:
         raise
     except Exception as e:

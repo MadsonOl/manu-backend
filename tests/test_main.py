@@ -63,7 +63,7 @@ async def test_criar_chamado_retorna_201(client):
     mock_db.collection.return_value = mock_collection
 
     with patch("app.routers.chamados.get_db", return_value=mock_db), \
-         patch("app.utils.id_generator.gerar_id", return_value="2026-03-0001"):
+         patch("app.repositories.crud.gerar_id", return_value="2026-03-0001"):
         async with client as c:
             response = await c.post("/chamados", json=payload)
 
@@ -284,3 +284,205 @@ async def test_criar_empresa_cnpj_invalido_autenticado_retorna_422(client, auten
     async with client as c:
         response = await c.post("/empresas", json=payload)
     assert response.status_code == 422
+
+
+# ── Resolucao de empresas nas ordens (Fase 1 e Fase 2) ────
+
+
+def _snap(id_, dados, existe=True):
+    """Snapshot de documento do Firestore (id/exists/to_dict)."""
+    snap = MagicMock()
+    snap.id = id_
+    snap.exists = existe
+    snap.to_dict.return_value = dados
+    return snap
+
+
+@pytest.mark.asyncio
+async def test_listar_ordens_resolve_empresas_em_lote(client, autenticado):
+    # Garante que a listagem resolve as empresas numa unica leitura em lote
+    # (db.get_all) e NAO faz uma leitura por OS (regressao do N+1): a referencia
+    # de empresa e usada so para montar o lote, seu .get() nunca e chamado.
+    os1 = _snap("os-1", {"local": "A", "descricao": "x", "prioridade": "NORMAL",
+                         "solicitante": "S", "status": "EM_ATENDIMENTO",
+                         "data": "01/01/2026", "empresa_id": "e1"})
+    os2 = _snap("os-2", {"local": "B", "descricao": "y", "prioridade": "ALTA",
+                         "solicitante": "T", "status": "FINALIZADO",
+                         "data": "02/01/2026", "empresa_id": "e2"})
+
+    ord_col = MagicMock()
+    ord_col.stream.return_value = [os1, os2]
+    emp_ref = MagicMock()  # referencia usada apenas para montar o lote do get_all
+    emp_col = MagicMock()
+    emp_col.document.return_value = emp_ref
+
+    db = MagicMock()
+    db.collection.side_effect = lambda nome: ord_col if nome == "ordens_servico" else emp_col
+    db.get_all.return_value = [_snap("e1", {"nome": "Acme"}), _snap("e2", {"nome": "Beta"})]
+
+    with patch("app.routers.ordens_servico.get_db", return_value=db):
+        async with client as c:
+            response = await c.get("/ordens-servico")
+
+    assert response.status_code == 200
+    por_id = {item["id"]: item for item in response.json()}
+    assert por_id["os-1"]["empresa"]["nome"] == "Acme"
+    assert por_id["os-2"]["empresa"]["nome"] == "Beta"
+    # Uma unica leitura em lote para as duas OS, sem leitura por item (sem N+1).
+    db.get_all.assert_called_once()
+    emp_ref.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_put_ordem_retorna_empresa_resolvida(client, autenticado):
+    # O PUT deve resolver a empresa como o GET/POST, e nao devolver empresa=null.
+    os_doc = _snap("os-9", {"local": "A", "descricao": "x", "prioridade": "NORMAL",
+                            "solicitante": "S", "status": "EM_ATENDIMENTO",
+                            "data": "01/01/2026", "empresa_id": "e1"})
+    os_ref = MagicMock()
+    os_ref.get.return_value = os_doc
+    ord_col = MagicMock()
+    ord_col.document.return_value = os_ref
+
+    emp_ref = MagicMock()
+    emp_ref.get.return_value = _snap("e1", {"nome": "Acme"})
+    emp_col = MagicMock()
+    emp_col.document.return_value = emp_ref
+
+    db = MagicMock()
+    db.collection.side_effect = lambda nome: ord_col if nome == "ordens_servico" else emp_col
+
+    payload = {"local": "A", "descricao": "x", "prioridade": "NORMAL", "solicitante": "S"}
+    with patch("app.routers.ordens_servico.get_db", return_value=db):
+        async with client as c:
+            response = await c.put("/ordens-servico/os-9", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["empresa"] == {"id": "e1", "nome": "Acme"}
+
+
+@pytest.mark.asyncio
+async def test_criar_ordem_servico_fallback_responsavel_e_empresa(client, autenticado):
+    # Cobre as regras do POST: fallback profissional->responsavel e empresa resolvida.
+    doc_ref = MagicMock()
+    ord_col = MagicMock()
+    ord_col.document.return_value = doc_ref
+    emp_ref = MagicMock()
+    emp_ref.get.return_value = _snap("e1", {"nome": "Acme"})
+    emp_col = MagicMock()
+    emp_col.document.return_value = emp_ref
+    db = MagicMock()
+    db.collection.side_effect = lambda nome: ord_col if nome == "ordens_servico" else emp_col
+
+    payload = {"local": "A", "descricao": "x", "prioridade": "NORMAL",
+               "solicitante": "S", "profissional": "Carlos", "empresa_id": "e1"}
+    with patch("app.routers.ordens_servico.get_db", return_value=db), \
+         patch("app.routers.ordens_servico.gerar_id", return_value="2026-03-0001"):
+        async with client as c:
+            response = await c.post("/ordens-servico", json=payload)
+
+    assert response.status_code == 201
+    corpo = response.json()
+    assert corpo["id"] == "2026-03-0001"
+    assert corpo["responsavel"] == "Carlos"
+    assert corpo["empresa"] == {"id": "e1", "nome": "Acme"}
+
+
+@pytest.mark.asyncio
+async def test_finalizar_os_existente_retorna_200(client, autenticado):
+    doc = _snap("os-1", {"local": "A", "descricao": "x", "prioridade": "NORMAL",
+                         "solicitante": "S", "status": "FINALIZADO", "data": "01/01/2026"})
+    doc_ref = MagicMock()
+    doc_ref.get.return_value = doc
+    ord_col = MagicMock()
+    ord_col.document.return_value = doc_ref
+    db = MagicMock()
+    db.collection.return_value = ord_col
+
+    with patch("app.routers.ordens_servico.get_db", return_value=db):
+        async with client as c:
+            response = await c.patch("/ordens-servico/os-1/finalizar")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "FINALIZADO"
+    doc_ref.update.assert_called_once_with({"status": "FINALIZADO"})
+
+
+@pytest.mark.asyncio
+async def test_erro_inesperado_retorna_500_generico(client, autenticado):
+    # Falha do Firestore deve virar 500 com detalhe generico, sem vazar a excecao.
+    db = MagicMock()
+    db.collection.side_effect = RuntimeError("boom")
+    with patch("app.routers.ordens_servico.get_db", return_value=db):
+        async with client as c:
+            response = await c.get("/ordens-servico")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Erro interno do servidor"}
+    assert "boom" not in response.text
+
+
+# ── Relatorios autenticados (filtros + resolucao de empresa) ──
+
+
+@pytest.mark.asyncio
+async def test_relatorios_filtra_por_status_e_resolve_empresa(client, autenticado):
+    os1 = _snap("os-1", {"local": "Bloco A", "descricao": "x", "prioridade": "NORMAL",
+                         "solicitante": "S", "status": "FINALIZADO", "responsavel": "prof-1",
+                         "data": "10/01/2026", "empresa_id": "e1"})
+    os2 = _snap("os-2", {"local": "Bloco B", "descricao": "y", "prioridade": "ALTA",
+                         "solicitante": "T", "status": "EM_ATENDIMENTO", "responsavel": "prof-2",
+                         "data": "20/01/2026", "empresa_id": "e2"})
+    ord_col = MagicMock()
+    ord_col.stream.return_value = [os1, os2]
+    emp_col = MagicMock()
+    emp_col.document.return_value = MagicMock()
+    db = MagicMock()
+    db.collection.side_effect = lambda nome: ord_col if nome == "ordens_servico" else emp_col
+    db.get_all.return_value = [_snap("e1", {"nome": "Acme"})]
+
+    with patch("app.routers.relatorios.get_db", return_value=db):
+        async with client as c:
+            response = await c.get("/relatorios?status=FINALIZADO")
+
+    assert response.status_code == 200
+    corpo = response.json()
+    assert [r["id"] for r in corpo] == ["os-1"]
+    assert corpo[0]["empresa"]["nome"] == "Acme"
+
+
+@pytest.mark.asyncio
+async def test_relatorios_data_invalida_retorna_422(client, autenticado):
+    ord_col = MagicMock()
+    ord_col.stream.return_value = []
+    db = MagicMock()
+    db.collection.return_value = ord_col
+
+    with patch("app.routers.relatorios.get_db", return_value=db):
+        async with client as c:
+            response = await c.get("/relatorios?data_inicio=31/13/2026")
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_relatorios_ignora_registro_com_data_invalida(client, autenticado):
+    # Registro legado com data ausente nao deve derrubar o relatorio inteiro (500).
+    bom = _snap("os-bom", {"local": "A", "descricao": "x", "prioridade": "NORMAL",
+                           "solicitante": "S", "status": "FINALIZADO", "data": "15/01/2026"})
+    legado = _snap("os-legado", {"local": "B", "descricao": "y", "prioridade": "NORMAL",
+                                 "solicitante": "T", "status": "FINALIZADO", "data": ""})
+    ord_col = MagicMock()
+    ord_col.stream.return_value = [bom, legado]
+    emp_col = MagicMock()
+    emp_col.document.return_value = MagicMock()
+    db = MagicMock()
+    db.collection.side_effect = lambda nome: ord_col if nome == "ordens_servico" else emp_col
+    db.get_all.return_value = []
+
+    with patch("app.routers.relatorios.get_db", return_value=db):
+        async with client as c:
+            response = await c.get("/relatorios?data_inicio=01/01/2026")
+
+    assert response.status_code == 200
+    assert {r["id"] for r in response.json()} == {"os-bom"}

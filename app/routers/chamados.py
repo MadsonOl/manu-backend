@@ -6,9 +6,12 @@ from datetime import datetime
 from app.schemas.chamado import ChamadoCreate, ChamadoResponse
 from app.firebase import get_db
 from app.dependencies import get_current_user
+from app.repositories.crud import CrudRepository
 
 router = APIRouter(prefix="/chamados", tags=["Chamados"])
 logger = logging.getLogger("manu")
+
+repo = CrudRepository("chamados", nao_encontrado="Chamado nao encontrado", excluido="Chamado deletado com sucesso")
 
 
 @router.post(
@@ -25,15 +28,10 @@ automaticamente pelo servidor.
 )
 async def criar_chamado(chamado: ChamadoCreate):
     try:
-        from app.utils.id_generator import gerar_id
-        db = get_db()
         data = chamado.model_dump()
+        # A data de abertura e definida pelo servidor (nao vem do cliente).
         data["data"] = datetime.now().strftime("%d/%m/%Y")
-        novo_id = gerar_id("chamados")
-        doc_ref = db.collection("chamados").document(novo_id)
-        data["id"] = novo_id
-        doc_ref.set(data)
-        return data
+        return repo.criar(get_db(), data)
     except HTTPException:
         raise
     except Exception as e:
@@ -49,9 +47,7 @@ async def criar_chamado(chamado: ChamadoCreate):
 )
 async def listar_chamados(user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        docs = db.collection("chamados").stream()
-        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        return repo.listar(get_db())
     except HTTPException:
         raise
     except Exception as e:
@@ -67,11 +63,7 @@ async def listar_chamados(user: dict = Depends(get_current_user)):
 )
 async def obter_chamado(chamado_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc = db.collection("chamados").document(chamado_id).get()
-        if not doc.exists:
-            raise HTTPException(status_code=404, detail="Chamado nao encontrado")
-        return {"id": doc.id, **doc.to_dict()}
+        return repo.obter(get_db(), chamado_id)
     except HTTPException:
         raise
     except Exception as e:
@@ -91,14 +83,7 @@ async def atualizar_chamado(
     user: dict = Depends(get_current_user),
 ):
     try:
-        db = get_db()
-        doc_ref = db.collection("chamados").document(chamado_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Chamado nao encontrado")
-        data = chamado.model_dump()
-        doc_ref.update(data)
-        updated = doc_ref.get()
-        return {"id": updated.id, **updated.to_dict()}
+        return repo.atualizar(get_db(), chamado_id, chamado.model_dump())
     except HTTPException:
         raise
     except Exception as e:
@@ -113,12 +98,7 @@ async def atualizar_chamado(
 )
 async def deletar_chamado(chamado_id: str, user: dict = Depends(get_current_user)):
     try:
-        db = get_db()
-        doc_ref = db.collection("chamados").document(chamado_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Chamado nao encontrado")
-        doc_ref.delete()
-        return {"message": "Chamado deletado com sucesso"}
+        return repo.excluir(get_db(), chamado_id)
     except HTTPException:
         raise
     except Exception as e:
